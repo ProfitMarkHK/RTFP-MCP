@@ -26,9 +26,9 @@ encodes all of that domain knowledge once, so an assistant just calls a tool.
 | `get_recent_trades` | Last N executed trades, decoded and symbol-enriched |
 | `get_trades` | Trades in a time range (auto-chunked into 300s windows) |
 | `get_current_quotes` | Latest bid/ask/mid per futures contract (orderbook = source of truth, sparse contracts auto-widened to 300s) |
-| `get_orderbook` | Raw orderbook snapshots in a range |
+| `get_orderbook` | Decoded orderbook snapshots in a range: ISO timestamp, symbol, book state and USD price levels |
 | `get_statistics` | OHLC + volume per contract (`last_price` = last *traded*, not current) |
-| `get_fulltick` | Order-flow events (A/D/O/S/T) in a range |
+| `get_fulltick` | Decoded order-flow events (A/D/O/S/T) in a range, one variant per message type |
 | `get_options_valuation` | Option prices, IV and greeks, joined with the catalog |
 | `black76_price` | Price a cash-settled futures option (Black76) |
 | `black76_implied_vol` | Solve implied vol from a market price |
@@ -59,7 +59,7 @@ bun run build
 Claude Code:
 
 ```bash
-claude mcp add rtfp-mcp -- bun run /Users/barryg/Git/RTFP-MCP/src/index.ts
+claude mcp add rtfp-mcp -- bun run ./src/index.ts
 ```
 
 OpenCode (`~/.config/opencode/opencode.jsonc`):
@@ -69,7 +69,7 @@ OpenCode (`~/.config/opencode/opencode.jsonc`):
   "mcp": {
     "rtfp": {
       "type": "local",
-      "command": ["bun", "run", "/Users/barryg/Git/RTFP-MCP/src/index.ts"]
+      "command": ["bun", "run", "./src/index.ts"]
     }
   }
 }
@@ -133,10 +133,14 @@ done-done until every applicable gate passes.
 Layout:
 
 ```
+CONTEXT.md      domain glossary for this context
+src/query-window.ts query-window policy: 300s windows, 24h cap, time parsing
+src/clock.ts      production clock adapter (the Clock type stays in the core)
 src/decode.ts     timestamp/price decoding rules (the tricky part of RTFP)
-src/client.ts     HTTP client: retries, safe pagination, 300s-window chunking
+src/client.ts     HTTP client: retries, safe pagination, closed-window caching
 src/catalog.ts    decoded instrument catalog (session-cached)
-src/market.ts     workflows: recent trades, current quotes, enrichment
+src/market.ts     domain types + decoders: trades, snapshots, events, quotes
+src/range-query.ts single seam for the five range/valuation tools: validation, catalog, fetch, decode, fetched_at
 src/black76.ts    Black76 pricing + bisection IV solver (no math deps)
 src/server.ts     MCP tool surface (Anthropic SDK McpServer + zod schemas)
 src/mock-server.ts RTFP look-alike: faithful endpoints over local HTTP
