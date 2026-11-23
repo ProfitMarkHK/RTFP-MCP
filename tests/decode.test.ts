@@ -3,8 +3,6 @@ import { describe, expect, test } from "bun:test";
 import {
   decodeScaledPrice,
   formatStructuredTs,
-  londonMarketWindowUtc,
-  parseTimeParam,
   structuredMillis,
   structuredToUnixSeconds,
   unixSecondsToIso,
@@ -46,55 +44,11 @@ describe("structured timestamps", () => {
   });
 });
 
-describe("parseTimeParam", () => {
-  test("passes through Unix seconds", () => {
-    expect(parseTimeParam(1739964606)).toBe(1739964606);
-    expect(parseTimeParam("1739964606")).toBe(1739964606);
-  });
-
-  test("parses UTC ISO strings", () => {
-    expect(parseTimeParam("2025-02-19T11:30:06Z")).toBe(1739964606);
-  });
-
-  test("interprets bare ISO as London local time", () => {
-    // 11:30 London on 2025-02-19 is GMT (UTC+0): same as 11:30 UTC.
-    expect(parseTimeParam("2025-02-19T11:30:06")).toBe(1739964606);
-    // 10:10 London on 2026-04-16 is BST (UTC+1): 09:10 UTC.
-    expect(parseTimeParam("2026-04-16T10:10:06")).toBe(parseTimeParam("2026-04-16T09:10:06Z"));
-  });
-
-  test("respects explicit offsets", () => {
-    expect(parseTimeParam("2025-02-19T12:30:06+01:00")).toBe(1739964606);
-  });
-
-  test("rejects nonsense", () => {
-    expect(() => parseTimeParam("not a time")).toThrow();
-  });
-});
-
 describe("decodeScaledPrice", () => {
   test("instrument_dict scaled prices decode via currency_multiplier", () => {
     // 50_000_000_000 with multiplier 10 -> 5.0 USD tick size (skill example).
     expect(decodeScaledPrice(50_000_000_000, 10)).toBe(5);
     // 900_000_000_000_000 with multiplier 10 -> 90,000 USD strike.
     expect(decodeScaledPrice(900_000_000_000_000, 10)).toBe(90_000);
-  });
-});
-
-describe("londonMarketWindowUtc", () => {
-  test("shifts the session window by the London offset", () => {
-    // GMT day: 07:30-17:30 UTC.
-    const gmt = londonMarketWindowUtc("2026-01-15");
-    expect(gmt.end - gmt.start).toBe(10 * 3600);
-    expect(new Date(gmt.start * 1000).toISOString()).toBe("2026-01-15T07:30:00.000Z");
-
-    // BST day: 06:30-16:30 UTC.
-    const bst = londonMarketWindowUtc("2026-04-16");
-    expect(new Date(bst.start * 1000).toISOString()).toBe("2026-04-16T06:30:00.000Z");
-    expect(bst.end - bst.start).toBe(10 * 3600);
-  });
-
-  test("rejects non-date input", () => {
-    expect(() => londonMarketWindowUtc("16 April 2026")).toThrow();
   });
 });

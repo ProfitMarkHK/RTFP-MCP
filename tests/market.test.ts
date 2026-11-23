@@ -257,4 +257,16 @@ describe("recentTrades", () => {
     expect(trades).toEqual([]);
     expect(calls.length).toBe(3);
   });
+
+  test("uses the injected clock for the walked window bounds", async () => {
+    const catalog = await catalogOf();
+    const now = 2_000_000_000;
+    const { client, calls } = scriptedClient({ trades: [{ result: [], next: "" }] });
+
+    await recentTrades(client, catalog, 1, { maxWindows: 2, clock: () => now });
+    expect(calls.map((c) => [c.params.start_time, c.params.end_time])).toEqual([
+      [now - 300, now],
+      [now - 600, now - 300],
+    ]);
+  });
 });

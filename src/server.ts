@@ -10,9 +10,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import { InstrumentCatalog, type DecodedInstrument } from "./catalog.js";
-import { RtfpClient, type JsonRecord } from "./client.js";
+import type { JsonRecord, RtfpClient } from "./client.js";
 import { black76ImpliedVol, black76Price } from "./black76.js";
-import { parseTimeParam } from "./decode.js";
+import { realClock } from "./clock.js";
 import {
   currentQuotes,
   recentTrades,
@@ -20,24 +20,32 @@ import {
   toStatistics,
   toTrades,
 } from "./market.js";
-
-/** Cap chunked range fetches at 24h (288 windows) by default. */
-const MAX_RANGE_SECONDS = 24 * 3600;
+import {
+  type Clock,
+  exceedsMaxRange,
+  INVERTED_RANGE_MESSAGE,
+  isInvertedRange,
+  parseTimeParam,
+  rangeTooLargeMessage,
+} from "./query-window.js";
 
 const timeValue = z.union([z.string(), z.number()]).describe(
   "ISO-8601 timestamp or Unix seconds. Bare ISO strings are interpreted as London local time.",
 );
 
-function fetchedAt(): string {
-  return new Date().toISOString().replace(".000Z", "Z");
-}
-
 export class ServerContext {
   readonly client: RtfpClient;
+  readonly clock: Clock;
   private readonly catalogs = new Map<string, Promise<InstrumentCatalog>>();
 
-  constructor(client: RtfpClient) {
+  constructor(client: RtfpClient, clock: Clock = realClock) {
     this.client = client;
+    this.clock = clock;
+  }
+
+  /** Freshness stamp from the shared clock. */
+  fetchedAt(): string {
+    return new Date(Math.round(this.clock() * 1000)).toISOString().replace(".000Z", "Z");
   }
 
   /** Instruments are static intraday: fetch once per session, reuse afterwards. */
@@ -70,13 +78,8 @@ function resolveRange(
 ): { startTime: number; endTime: number } {
   const startTime = parseTimeParam(start);
   const endTime = parseTimeParam(end);
-  if (endTime <= startTime) throw new Error("end_time must be after start_time");
-  if (endTime - startTime > MAX_RANGE_SECONDS) {
-    throw new Error(
-      `time range exceeds ${MAX_RANGE_SECONDS}s; split into smaller ranges ` +
-        "(the API allows 300s windows, this server chunks them for you)",
-    );
-  }
+  if (isInvertedRange(startTime, endTime)) throw new Error(INVERTED_RANGE_MESSAGE);
+  if (exceedsMaxRange(startTime, endTime)) throw new Error(rangeTooLargeMessage());
   return { startTime, endTime };
 }
 
@@ -111,13 +114,13 @@ export function buildServer(context: ServerContext): McpServer {
                 futures: pick(catalog.futures),
                 options: pick(catalog.options),
                 strategies: pick(catalog.strategies),
-                fetched_at: fetchedAt(),
+                fetched_at: context.fetchedAt(),
               }
             : category === "futures"
-              ? { futures: pick(catalog.futures), fetched_at: fetchedAt() }
+              ? { futures: pick(catalog.futures), fetched_at: context.fetchedAt() }
               : category === "options"
-                ? { options: pick(catalog.options), fetched_at: fetchedAt() }
-                : { strategies: pick(catalog.strategies), fetched_at: fetchedAt() };
+                ? { options: pick(catalog.options), fetched_at: context.fetchedAt() }
+                : { strategies: pick(catalog.strategies), fetched_at: context.fetchedAt() };
         return text(payload);
       } catch (error) {
         return failure(error);
@@ -161,8 +164,11 @@ export function buildServer(context: ServerContext): McpServer {
     async ({ n, underlying }) => {
       try {
         const catalog = await context.catalog(underlying);
-        const trades = await recentTrades(context.client, catalog, n, { underlying });
-        return text({ count: trades.length, trades, fetched_at: fetchedAt() });
+        const trades = await recentTrades(context.client, catalog, n, {
+          underlying,
+          clock: context.clock,
+        });
+        return text({ count: trades.length, trades, fetched_at: context.fetchedAt() });
       } catch (error) {
         return failure(error);
       }
@@ -196,7 +202,7 @@ export function buildServer(context: ServerContext): McpServer {
         });
         const records = await context.client.fetchRange("trades", startTime, endTime, params);
         const trades = toTrades(records, catalog).sort((a, b) => a.timestampUnixSec - b.timestampUnixSec);
-        return text({ count: trades.length, trades, fetched_at: fetchedAt() });
+        return text({ count: trades.length, trades, fetched_at: context.fetchedAt() });
       } catch (error) {
         return failure(error);
       }
@@ -220,8 +226,12 @@ export function buildServer(context: ServerContext): McpServer {
       try {
         const catalog = await context.catalog(underlying);
         const instrumentId = symbol ? catalog.find(symbol)?.gfoId : undefined;
-        const quotes = await currentQuotes(context.client, catalog, { underlying, instrumentId });
-        return text({ quotes, fetched_at: fetchedAt() });
+        const quotes = await currentQuotes(context.client, catalog, {
+          underlying,
+          instrumentId,
+          clock: context.clock,
+        });
+        return text({ quotes, fetched_at: context.fetchedAt() });
       } catch (error) {
         return failure(error);
       }
@@ -253,7 +263,7 @@ export function buildServer(context: ServerContext): McpServer {
           instrument_id,
         });
         const records = await context.client.fetchRange("orderbook", startTime, endTime, params);
-        return text({ count: records.length, snapshots: records, fetched_at: fetchedAt() });
+        return text({ count: records.length, snapshots: records, fetched_at: context.fetchedAt() });
       } catch (error) {
         return failure(error);
       }
@@ -287,7 +297,7 @@ export function buildServer(context: ServerContext): McpServer {
         });
         const records = await context.client.fetchRange("statistics", startTime, endTime, params);
         const stats = toStatistics(records, catalog);
-        return text({ count: stats.length, statistics: stats, fetched_at: fetchedAt() });
+        return text({ count: stats.length, statistics: stats, fetched_at: context.fetchedAt() });
       } catch (error) {
         return failure(error);
       }
@@ -319,7 +329,7 @@ export function buildServer(context: ServerContext): McpServer {
           instrument_id,
         });
         const records = await context.client.fetchRange("fulltick", startTime, endTime, params);
-        return text({ count: records.length, events: records, fetched_at: fetchedAt() });
+        return text({ count: records.length, events: records, fetched_at: context.fetchedAt() });
       } catch (error) {
         return failure(error);
       }
@@ -343,7 +353,7 @@ export function buildServer(context: ServerContext): McpServer {
           underlying,
         });
         const valuations = toOptionValuations(records, catalog);
-        return text({ count: valuations.length, valuations, fetched_at: fetchedAt() });
+        return text({ count: valuations.length, valuations, fetched_at: context.fetchedAt() });
       } catch (error) {
         return failure(error);
       }

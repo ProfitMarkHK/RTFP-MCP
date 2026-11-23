@@ -215,6 +215,17 @@ describe("MCP server over the real protocol", () => {
   });
 });
 
+describe("ServerContext clock", () => {
+  test("stamps fetched_at from the injected clock", () => {
+    const at = Date.parse("2026-01-15T12:34:56.789Z") / 1000;
+    const context = new ServerContext(
+      new RtfpClient({ transport: fakeTransport(), sleepMs: noSleep, clock: () => at }),
+      () => at,
+    );
+    expect(context.fetchedAt()).toBe("2026-01-15T12:34:56.789Z");
+  });
+});
+
 describe("ServerContext catalog caching", () => {
   test("catalog is fetched once and reused across calls", async () => {
     let fetches = 0;

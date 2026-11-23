@@ -27,6 +27,13 @@
  */
 
 import { black76Price } from "./black76.js";
+import { realClock } from "./clock.js";
+import {
+  type Clock,
+  INVERTED_RANGE_MESSAGE,
+  isInvertedRange,
+  MAX_WINDOW_SECONDS,
+} from "./query-window.js";
 
 export const MOCK_BASE_PRICE = 74_260;
 export const MOCK_RISK_FREE_RATE = 0.05;
@@ -40,6 +47,9 @@ const STATS_INTERVAL = 30;
 const WRONG_NEXT_HOST = "lookalike-rtfp.gfo.invalid";
 
 type JsonRecord = Record<string, unknown>;
+
+/** Fixture clock for this look-alike process; injectable via startMockServer. */
+let fixtureClock: Clock = realClock;
 
 // ---------- deterministic noise ----------
 
@@ -89,7 +99,7 @@ interface OptionDef {
 }
 
 function dayAt16Utc(daysFromNow: number): number {
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(fixtureClock());
   const midnight = now - (now % SECONDS_PER_DAY);
   return midnight + daysFromNow * SECONDS_PER_DAY + 16 * 3600;
 }
@@ -376,7 +386,7 @@ function greeksOf(option: OptionDef, F: number, years: number, vol: number): Jso
 }
 
 export function optionValuationRecords(): JsonRecord[] {
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(fixtureClock());
   return optionsDefs().map((option): JsonRecord => {
     const F = futureMid(futureById(option.futureId), now);
     const years = yearsToExpiry(option.expirySec, now);
@@ -494,8 +504,10 @@ function handleTimeRange(endpoint: string, params: URLSearchParams): Response {
   const start = intParam(params, "start_time");
   const end = intParam(params, "end_time");
   if (start === null || end === null) return json({ error: "start_time and end_time required" }, 400);
-  if (end <= start) return json({ error: "end_time must exceed start_time" }, 400);
-  if (end - start > 300) return json({ error: "window exceeds 300 seconds" }, 400);
+  if (isInvertedRange(start, end)) return json({ error: INVERTED_RANGE_MESSAGE }, 400);
+  if (end - start > MAX_WINDOW_SECONDS) {
+    return json({ error: `window exceeds ${MAX_WINDOW_SECONDS} seconds` }, 400);
+  }
   const fid = intParam(params, "instrument_id");
   const offset = intParam(params, "start") ?? 0;
   const all = windowRecords(endpoint, start, end, fid);
@@ -551,7 +563,13 @@ export interface MockServer {
 }
 
 /** Start the look-alike. Port 0 lets the OS pick a free port. */
-export function startMockServer(options: { port?: number; hostname?: string } = {}): MockServer {
+export function startMockServer(
+  options: { port?: number; hostname?: string; clock?: Clock } = {},
+): MockServer {
+  const previousClock = fixtureClock;
+  fixtureClock = options.clock ?? realClock;
+  cachedFutures = null;
+  cachedOptions = null;
   const server = Bun.serve({
     port: options.port ?? 0,
     hostname: options.hostname ?? "127.0.0.1",
@@ -562,6 +580,9 @@ export function startMockServer(options: { port?: number; hostname?: string } = 
     port: server.port ?? 0,
     stop: async () => {
       server.stop(true);
+      fixtureClock = previousClock;
+      cachedFutures = null;
+      cachedOptions = null;
     },
   };
 }

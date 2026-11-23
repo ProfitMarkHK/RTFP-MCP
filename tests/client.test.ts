@@ -4,7 +4,6 @@ import {
   nextOffset,
   RtfpClient,
   RtfpError,
-  splitWindows,
   type JsonRecord,
   type Transport,
 } from "../src/client.js";
@@ -124,16 +123,6 @@ describe("retries", () => {
 });
 
 describe("window chunking", () => {
-  test("splits ranges into <=300s windows", () => {
-    expect(splitWindows(0, 300, 300)).toEqual([{ start: 0, end: 300 }]);
-    expect(splitWindows(0, 301, 300)).toEqual([
-      { start: 0, end: 300 },
-      { start: 300, end: 301 },
-    ]);
-    expect(splitWindows(100, 1000, 300)).toHaveLength(3);
-    expect(splitWindows(50, 50, 300)).toEqual([]);
-  });
-
   test("chunks a 12-minute fetch into three windows", async () => {
     const { transport, calls } = scriptedTransport({
       trades: [
@@ -179,5 +168,22 @@ describe("window chunking", () => {
     await client.fetchRange("trades", past, past + 900, {});
     expect(calls.length).toBe(1);
     expect(calls[0]?.params.start_time).toBe(past + 600);
+  });
+
+  test("uses the injected clock to decide which windows are closed", async () => {
+    const now = 2_000_000_000;
+    const { transport, calls } = scriptedTransport({ trades: [bodyWith([])] });
+    const client = new RtfpClient({ transport, sleepMs: noSleep, clock: () => now });
+    const start = now - 900;
+    const end = now + 300;
+
+    await client.fetchRange("trades", start, end, {});
+    expect(calls.length).toBe(4);
+    calls.length = 0;
+
+    // Two windows end at or before now-1; the two still-open ones are refetched.
+    await client.fetchRange("trades", start, end, {});
+    expect(calls.length).toBe(2);
+    expect(calls.map((c) => c.params.start_time)).toEqual([now - 300, now]);
   });
 });

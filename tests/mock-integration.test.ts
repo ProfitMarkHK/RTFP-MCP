@@ -101,9 +101,9 @@ describe("RTFP look-alike: trades", () => {
 describe("RTFP look-alike: window and pagination quirks", () => {
   test("rejects a >300s direct window with HTTP 400", async () => {
     const { start } = pastWindow(20);
-    await expect(
-      client.getPage("trades", { start_time: start, end_time: start + 600 }),
-    ).rejects.toThrow(/HTTP 400/);
+    const request = client.getPage("trades", { start_time: start, end_time: start + 600 });
+    await expect(request).rejects.toThrow(/HTTP 400/);
+    await expect(request).rejects.toThrow(/window exceeds 300 seconds/);
   });
 
   test("chunked fetchRange spans a 12-minute window without error", async () => {
@@ -183,6 +183,27 @@ describe("RTFP look-alike: options_valuation", () => {
       expect(valuation.optionPriceUsd).toBeCloseTo(theoretical, 1);
       expect(Math.abs(valuation.delta!)).toBeLessThanOrEqual(1.01);
       expect(valuation.vega!).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("RTFP look-alike: fixture clock", () => {
+  test("uses the injected clock for valuations and generated expiries", async () => {
+    const frozen = 1_800_000_000;
+    const frozenHandle = startMockServer({ port: 0, clock: () => frozen });
+    try {
+      const frozenClient = new RtfpClient({ baseUrl: frozenHandle.url });
+      const valuations = await frozenClient.getPage("options_valuation", { underlying: "BTC" });
+      expect(valuations[0]?.exchange_timestamp).toBe(frozen);
+
+      const catalog = await InstrumentCatalog.load(frozenClient);
+      const midnight = frozen - (frozen % 86_400);
+      const expectedExpiry = new Date((midnight + 30 * 86_400 + 16 * 3600) * 1000)
+        .toISOString()
+        .replace(".000Z", "Z");
+      expect(catalog.futures[0]?.expiryIso).toBe(expectedExpiry);
+    } finally {
+      await frozenHandle.stop();
     }
   });
 });

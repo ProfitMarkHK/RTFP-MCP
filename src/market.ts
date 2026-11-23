@@ -9,9 +9,11 @@
  *   reported only when explicitly requested.
  */
 
-import { MAX_WINDOW_SECONDS, RtfpClient, type JsonRecord } from "./client.js";
+import type { JsonRecord, RtfpClient } from "./client.js";
 import type { DecodedInstrument, InstrumentCatalog } from "./catalog.js";
+import { realClock } from "./clock.js";
 import { structuredToUnixSeconds, unixSecondsToIso } from "./decode.js";
+import { type Clock, MAX_WINDOW_SECONDS } from "./query-window.js";
 
 export interface Trade {
   timestampIso: string;
@@ -235,9 +237,10 @@ async function widenForMissing(
   snapshots: Map<number, JsonRecord>,
   missing: number[],
   underlying: string,
+  clock: Clock,
 ): Promise<void> {
   if (missing.length === 0) return;
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(clock());
   const wide = await client.getPage("orderbook", {
     underlying,
     start_time: now - MAX_WINDOW_SECONDS,
@@ -260,10 +263,11 @@ async function widenForMissing(
 export async function currentQuotes(
   client: RtfpClient,
   catalog: InstrumentCatalog,
-  options: { underlying?: string; instrumentId?: number } = {},
+  options: { underlying?: string; instrumentId?: number; clock?: Clock } = {},
 ): Promise<Quote[]> {
   const underlying = options.underlying ?? "BTC";
-  const now = Math.floor(Date.now() / 1000);
+  const clock = options.clock ?? realClock;
+  const now = Math.floor(clock());
   const shortParams: Record<string, string | number> = {
     underlying,
     start_time: now - 5,
@@ -275,7 +279,7 @@ export async function currentQuotes(
   const targetIds = new Set(targetFutures(catalog, options.instrumentId).map((f) => f.gfoId));
   const quoted = quotedContractIds(snapshots);
   const missing = [...targetIds].filter((id) => !quoted.has(id));
-  await widenForMissing(client, snapshots, missing, underlying);
+  await widenForMissing(client, snapshots, missing, underlying, clock);
 
   return [...snapshots]
     .filter(([id]) => targetIds.has(id))
@@ -288,11 +292,11 @@ export async function recentTrades(
   client: RtfpClient,
   catalog: InstrumentCatalog,
   n: number,
-  options: { underlying?: string; maxWindows?: number } = {},
+  options: { underlying?: string; maxWindows?: number; clock?: Clock } = {},
 ): Promise<Trade[]> {
   const underlying = options.underlying ?? "BTC";
   const maxWindows = options.maxWindows ?? 288; // 24h of 5-minute windows.
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor((options.clock ?? realClock)());
   const collected = new Map<string, Trade>();
   for (let i = 0; i < maxWindows && collected.size < n; i++) {
     const end = now - i * MAX_WINDOW_SECONDS;

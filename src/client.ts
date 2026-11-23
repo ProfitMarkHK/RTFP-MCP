@@ -10,8 +10,17 @@
  *    on an empty `result` instead.
  */
 
+import { realClock } from "./clock.js";
+import {
+  type Clock,
+  INVERTED_RANGE_MESSAGE,
+  isClosedWindow,
+  isInvertedRange,
+  splitWindows,
+  type Window,
+} from "./query-window.js";
+
 export const DEFAULT_BASE_URL = "https://marketdata.gfo-x.com:38973";
-export const MAX_WINDOW_SECONDS = 300;
 
 /** transport(url, params, timeoutMs) -> { status, body }. Throws on network errors. */
 export type Transport = (
@@ -58,24 +67,10 @@ export class RtfpError extends Error {
 }
 
 export type JsonRecord = Record<string, unknown>;
-export type Window = { start: number; end: number };
 
 export interface FetchJsonOptions {
   params: Record<string, string | number>;
   timeoutMs: number;
-}
-
-/** Split [start, end) into consecutive windows of at most `maxWindow` seconds. */
-export function splitWindows(start: number, end: number, maxWindow: number): Window[] {
-  if (end <= start) return [];
-  const windows: Window[] = [];
-  let cursor = start;
-  while (cursor < end) {
-    const windowEnd = Math.min(cursor + maxWindow, end);
-    windows.push({ start: cursor, end: windowEnd });
-    cursor = windowEnd;
-  }
-  return windows;
 }
 
 export interface RtfpClientOptions {
@@ -84,6 +79,7 @@ export interface RtfpClientOptions {
   timeoutMs?: number;
   maxRetries?: number;
   sleepMs?: (ms: number) => Promise<void>;
+  clock?: Clock;
 }
 
 export class RtfpClient {
@@ -92,6 +88,7 @@ export class RtfpClient {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly clock: Clock;
   private readonly windowCache = new Map<string, JsonRecord[]>();
 
   constructor(options: RtfpClientOptions = {}) {
@@ -99,6 +96,7 @@ export class RtfpClient {
     this.transport = options.transport ?? ((u, p, t) => new FetchTransport().call(u, p, t));
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.maxRetries = options.maxRetries ?? 3;
+    this.clock = options.clock ?? realClock;
     this.sleep =
       options.sleepMs ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   }
@@ -191,15 +189,14 @@ export class RtfpClient {
     endTime: number,
     params: Record<string, string | number> = {},
   ): Promise<JsonRecord[]> {
-    if (endTime <= startTime) {
-      throw new RtfpError(`end_time must be after start_time: ${startTime}..${endTime}`);
+    if (isInvertedRange(startTime, endTime)) {
+      throw new RtfpError(INVERTED_RANGE_MESSAGE);
     }
-    const now = Math.floor(Date.now() / 1000);
-    const closedAt = now - 1;
+    const now = Math.floor(this.clock());
     const records: JsonRecord[] = [];
-    for (const window of splitWindows(startTime, endTime, MAX_WINDOW_SECONDS)) {
+    for (const window of splitWindows(startTime, endTime)) {
       const cacheKey = rangeCacheKey(endpoint, params, window);
-      const isClosed = window.end <= closedAt;
+      const isClosed = isClosedWindow(window, now);
       if (isClosed && this.windowCache.has(cacheKey)) {
         records.push(...this.windowCache.get(cacheKey)!);
         continue;
