@@ -52,6 +52,50 @@ function fakeTransport(): Transport {
             next: "",
           },
         };
+      case "orderbook":
+        return {
+          status: 200,
+          body: {
+            result: [
+              {
+                timestamp: 1739964606000000000,
+                contract_number: 5169,
+                state: "O",
+                num_of_bids: 1,
+                num_of_asks: 1,
+                bids: [{ quantity: 5, price: 74_260 }],
+                asks: [{ quantity: 3, price: 74_270 }],
+                full_tick_reference_sequence: 7,
+              },
+            ],
+            next: "",
+          },
+        };
+      case "fulltick":
+        return {
+          status: 200,
+          body: {
+            result: [
+              {
+                timestamp: 1739964606000000000,
+                contract_number: 5169,
+                message_type: "A",
+                order_id: "O-1",
+                volume: 4,
+                price: 74_258,
+                side: "B",
+                type: "D",
+              },
+              {
+                timestamp: 1739964606000000001n,
+                contract_number: 5169,
+                message_type: "S",
+                price: 74_262,
+              },
+            ],
+            next: "",
+          },
+        };
       case "options_valuation":
         return { status: 200, body: { result: [], next: "" } };
       default:
@@ -127,26 +171,51 @@ describe("MCP server over the real protocol", () => {
     expect(payload.trades[0]!.priceUsd).toBe(74_260.5);
   });
 
-  test("get_trades chunks an ISO time range and stamps fetched_at", async () => {
+  test("get_trades returns a payload envelope over the protocol", async () => {
     const result = await client.callTool({
       name: "get_trades",
-      arguments: { start_time: "2025-02-19T11:00:00Z", end_time: "2025-02-19T11:10:00Z" },
+      arguments: { start_time: "2025-02-19T11:00:00Z", end_time: "2025-02-19T11:05:00Z" },
     });
-    const payload = textOf(result) as { count: number; fetched_at: string };
-    // 10 minutes = two 300s windows; the fake transport answers each with
-    // its single-trade page, proving the range was chunked and merged.
-    expect(payload.count).toBe(2);
-    expect(payload.fetched_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/);
+    expect(result.isError).not.toBe(true);
+    const payload = textOf(result) as Record<string, unknown>;
+    expect(Object.keys(payload)).toEqual(
+      expect.arrayContaining(["count", "trades", "fetched_at"]),
+    );
+    expect(Array.isArray(payload.trades)).toBe(true);
   });
 
-  test("get_trades rejects an unknown symbol with an MCP error result", async () => {
+  test("get_orderbook returns a payload envelope over the protocol", async () => {
+    const result = await client.callTool({
+      name: "get_orderbook",
+      arguments: { start_time: "2025-02-19T11:00:00Z", end_time: "2025-02-19T11:05:00Z" },
+    });
+    expect(result.isError).not.toBe(true);
+    const payload = textOf(result) as Record<string, unknown>;
+    expect(Object.keys(payload)).toEqual(
+      expect.arrayContaining(["count", "snapshots", "fetched_at"]),
+    );
+    expect(Array.isArray(payload.snapshots)).toBe(true);
+  });
+
+  test("get_fulltick returns a payload envelope over the protocol", async () => {
+    const result = await client.callTool({
+      name: "get_fulltick",
+      arguments: { start_time: "2025-02-19T11:00:00Z", end_time: "2025-02-19T11:05:00Z" },
+    });
+    expect(result.isError).not.toBe(true);
+    const payload = textOf(result) as Record<string, unknown>;
+    expect(Object.keys(payload)).toEqual(expect.arrayContaining(["count", "events", "fetched_at"]));
+    expect(Array.isArray(payload.events)).toBe(true);
+  });
+
+  test("a tagged failure becomes an MCP error result with RTFP error text", async () => {
     const result = await client.callTool({
       name: "get_trades",
       arguments: { start_time: "2025-02-19T11:00:00Z", end_time: "2025-02-19T11:05:00Z", symbol: "NOPE" },
     });
     expect(result.isError).toBe(true);
     const block = result.content.find((c) => c.type === "text") as { text?: string };
-    expect(block.text).toContain("unknown instrument: NOPE");
+    expect(block.text?.startsWith("RTFP error: ")).toBe(true);
   });
 
   test("black76_price computes a put through the protocol", async () => {

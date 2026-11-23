@@ -10,24 +10,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import { InstrumentCatalog, type DecodedInstrument } from "./catalog.js";
-import type { JsonRecord, RtfpClient } from "./client.js";
+import { RtfpClient } from "./client.js";
 import { black76ImpliedVol, black76Price } from "./black76.js";
 import { realClock } from "./clock.js";
-import {
-  currentQuotes,
-  recentTrades,
-  toOptionValuations,
-  toStatistics,
-  toTrades,
-} from "./market.js";
-import {
-  type Clock,
-  exceedsMaxRange,
-  INVERTED_RANGE_MESSAGE,
-  isInvertedRange,
-  parseTimeParam,
-  rangeTooLargeMessage,
-} from "./query-window.js";
+import { currentQuotes, recentTrades } from "./market.js";
+import { queryRange, stampFetchedAt } from "./range-query.js";
+import type { Clock } from "./query-window.js";
 
 const timeValue = z.union([z.string(), z.number()]).describe(
   "ISO-8601 timestamp or Unix seconds. Bare ISO strings are interpreted as London local time.",
@@ -43,9 +31,9 @@ export class ServerContext {
     this.clock = clock;
   }
 
-  /** Freshness stamp from the shared clock. */
+  /** Freshness stamp from the shared clock, with millisecond precision. */
   fetchedAt(): string {
-    return new Date(Math.round(this.clock() * 1000)).toISOString().replace(".000Z", "Z");
+    return stampFetchedAt(this.clock);
   }
 
   /** Instruments are static intraday: fetch once per session, reuse afterwards. */
@@ -70,17 +58,6 @@ function text(payload: unknown) {
 function failure(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return { content: [{ type: "text" as const, text: `RTFP error: ${message}` }], isError: true };
-}
-
-function resolveRange(
-  start: string | number,
-  end: string | number,
-): { startTime: number; endTime: number } {
-  const startTime = parseTimeParam(start);
-  const endTime = parseTimeParam(end);
-  if (isInvertedRange(startTime, endTime)) throw new Error(INVERTED_RANGE_MESSAGE);
-  if (exceedsMaxRange(startTime, endTime)) throw new Error(rangeTooLargeMessage());
-  return { startTime, endTime };
 }
 
 function toInstrumentJson(instrument: DecodedInstrument) {
@@ -192,20 +169,20 @@ export function buildServer(context: ServerContext): McpServer {
       },
     },
     async ({ start_time, end_time, underlying, symbol, instrument_id }) => {
-      try {
-        const { startTime, endTime } = resolveRange(start_time, end_time);
-        const catalog = await context.catalog(underlying);
-        const params = await instrumentParams(context, catalog, {
-          underlying,
-          symbol,
-          instrument_id,
-        });
-        const records = await context.client.fetchRange("trades", startTime, endTime, params);
-        const trades = toTrades(records, catalog).sort((a, b) => a.timestampUnixSec - b.timestampUnixSec);
-        return text({ count: trades.length, trades, fetched_at: context.fetchedAt() });
-      } catch (error) {
-        return failure(error);
-      }
+      const result = await queryRange(context, {
+        kind: "trades",
+        start: start_time,
+        end: end_time,
+        underlying,
+        symbol,
+        instrumentId: instrument_id,
+      });
+      if (!result.ok) return failure(new Error(result.error));
+      return text({
+        count: result.value.length,
+        trades: result.value,
+        fetched_at: result.fetchedAt,
+      });
     },
   );
 
@@ -243,8 +220,8 @@ export function buildServer(context: ServerContext): McpServer {
     {
       title: "Orderbook snapshots",
       description:
-        "Raw orderbook snapshots in a time range (max 24h; 300s windows are chunked " +
-        "automatically). Prices are already USD.",
+        "Decoded orderbook snapshots in a time range (max 24h; 300s windows are " +
+        "chunked automatically). ISO timestamps and USD price levels.",
       inputSchema: {
         start_time: timeValue,
         end_time: timeValue,
@@ -254,19 +231,20 @@ export function buildServer(context: ServerContext): McpServer {
       },
     },
     async ({ start_time, end_time, underlying, symbol, instrument_id }) => {
-      try {
-        const { startTime, endTime } = resolveRange(start_time, end_time);
-        const catalog = await context.catalog(underlying);
-        const params = await instrumentParams(context, catalog, {
-          underlying,
-          symbol,
-          instrument_id,
-        });
-        const records = await context.client.fetchRange("orderbook", startTime, endTime, params);
-        return text({ count: records.length, snapshots: records, fetched_at: context.fetchedAt() });
-      } catch (error) {
-        return failure(error);
-      }
+      const result = await queryRange(context, {
+        kind: "orderbook",
+        start: start_time,
+        end: end_time,
+        underlying,
+        symbol,
+        instrumentId: instrument_id,
+      });
+      if (!result.ok) return failure(new Error(result.error));
+      return text({
+        count: result.value.length,
+        snapshots: result.value,
+        fetched_at: result.fetchedAt,
+      });
     },
   );
 
@@ -287,20 +265,20 @@ export function buildServer(context: ServerContext): McpServer {
       },
     },
     async ({ start_time, end_time, underlying, symbol, instrument_id }) => {
-      try {
-        const { startTime, endTime } = resolveRange(start_time, end_time);
-        const catalog = await context.catalog(underlying);
-        const params = await instrumentParams(context, catalog, {
-          underlying,
-          symbol,
-          instrument_id,
-        });
-        const records = await context.client.fetchRange("statistics", startTime, endTime, params);
-        const stats = toStatistics(records, catalog);
-        return text({ count: stats.length, statistics: stats, fetched_at: context.fetchedAt() });
-      } catch (error) {
-        return failure(error);
-      }
+      const result = await queryRange(context, {
+        kind: "statistics",
+        start: start_time,
+        end: end_time,
+        underlying,
+        symbol,
+        instrumentId: instrument_id,
+      });
+      if (!result.ok) return failure(new Error(result.error));
+      return text({
+        count: result.value.length,
+        statistics: result.value,
+        fetched_at: result.fetchedAt,
+      });
     },
   );
 
@@ -309,8 +287,8 @@ export function buildServer(context: ServerContext): McpServer {
     {
       title: "Full tick events",
       description:
-        "Order-flow events in a time range (max 24h): order added (A), deleted (D), " +
-        "opening price (O), settlement (S), book state (T).",
+        "Decoded order-flow events in a time range (max 24h): order added (A), " +
+        "deleted (D), opening price (O), settlement (S), book state (T).",
       inputSchema: {
         start_time: timeValue,
         end_time: timeValue,
@@ -320,19 +298,20 @@ export function buildServer(context: ServerContext): McpServer {
       },
     },
     async ({ start_time, end_time, underlying, symbol, instrument_id }) => {
-      try {
-        const { startTime, endTime } = resolveRange(start_time, end_time);
-        const catalog = await context.catalog(underlying);
-        const params = await instrumentParams(context, catalog, {
-          underlying,
-          symbol,
-          instrument_id,
-        });
-        const records = await context.client.fetchRange("fulltick", startTime, endTime, params);
-        return text({ count: records.length, events: records, fetched_at: context.fetchedAt() });
-      } catch (error) {
-        return failure(error);
-      }
+      const result = await queryRange(context, {
+        kind: "fulltick",
+        start: start_time,
+        end: end_time,
+        underlying,
+        symbol,
+        instrumentId: instrument_id,
+      });
+      if (!result.ok) return failure(new Error(result.error));
+      return text({
+        count: result.value.length,
+        events: result.value,
+        fetched_at: result.fetchedAt,
+      });
     },
   );
 
@@ -347,16 +326,13 @@ export function buildServer(context: ServerContext): McpServer {
       inputSchema: { underlying: z.string().default("BTC") },
     },
     async ({ underlying }) => {
-      try {
-        const catalog = await context.catalog(underlying);
-        const records: JsonRecord[] = await context.client.getPage("options_valuation", {
-          underlying,
-        });
-        const valuations = toOptionValuations(records, catalog);
-        return text({ count: valuations.length, valuations, fetched_at: context.fetchedAt() });
-      } catch (error) {
-        return failure(error);
-      }
+      const result = await queryRange(context, { kind: "options_valuation", underlying });
+      if (!result.ok) return failure(new Error(result.error));
+      return text({
+        count: result.value.length,
+        valuations: result.value,
+        fetched_at: result.fetchedAt,
+      });
     },
   );
 
@@ -419,22 +395,4 @@ export function buildServer(context: ServerContext): McpServer {
   );
 
   return server;
-}
-
-async function instrumentParams(
-  context: ServerContext,
-  catalog: InstrumentCatalog,
-  options: { underlying: string; symbol?: string; instrument_id?: number },
-): Promise<Record<string, string | number>> {
-  const params: Record<string, string | number> = { underlying: options.underlying };
-  if (options.instrument_id !== undefined) {
-    params.instrument_id = options.instrument_id;
-    return params;
-  }
-  if (options.symbol) {
-    const instrument = catalog.find(options.symbol);
-    if (!instrument) throw new Error(`unknown instrument: ${options.symbol}`);
-    params.instrument_id = instrument.gfoId;
-  }
-  return params;
 }

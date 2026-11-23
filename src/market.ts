@@ -64,6 +64,77 @@ export interface OptionValuation {
   vega: number | null;
 }
 
+/** One resting price level of an orderbook snapshot (quantity in contracts). */
+export interface OrderbookLevel {
+  quantity: number | null;
+  priceUsd: number | null;
+}
+
+/** A decoded snapshot of one contract's book at one instant. */
+export interface OrderbookSnapshot {
+  snapshotIso: string;
+  symbol: string;
+  gfoId: number;
+  state: string;
+  numBids: number | null;
+  numAsks: number | null;
+  bids: OrderbookLevel[];
+  asks: OrderbookLevel[];
+  fullTickReferenceSequence: number | null;
+}
+
+/** Identity shared by every order-flow event. */
+interface OrderFlowEventIdentity {
+  timestampIso: string;
+  symbol: string;
+  gfoId: number;
+}
+
+/** A: a new order resting on the book. `orderType` is the venue's type flag. */
+export interface OrderAddedEvent extends OrderFlowEventIdentity {
+  messageType: "A";
+  orderId: string;
+  volume: number | null;
+  priceUsd: number | null;
+  side: string;
+  orderType: string;
+}
+
+/** D: an order removed from the book, with its remaining quantity. */
+export interface OrderDeletedEvent extends OrderFlowEventIdentity {
+  messageType: "D";
+  orderId: string;
+  side: string;
+  remaining: number | null;
+}
+
+/** S: a settlement price for the contract. */
+export interface SettlementEvent extends OrderFlowEventIdentity {
+  messageType: "S";
+  priceUsd: number | null;
+}
+
+/** O: the session's opening price, with its volume. */
+export interface OpeningPriceEvent extends OrderFlowEventIdentity {
+  messageType: "O";
+  volume: number | null;
+  priceUsd: number | null;
+}
+
+/** T: the state of the whole book. */
+export interface BookStateEvent extends OrderFlowEventIdentity {
+  messageType: "T";
+  state: string;
+}
+
+/** Order-flow events are a family keyed by the venue's message type. */
+export type OrderFlowEvent =
+  | OrderAddedEvent
+  | OrderDeletedEvent
+  | SettlementEvent
+  | OpeningPriceEvent
+  | BookStateEvent;
+
 function num(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
@@ -175,6 +246,100 @@ export function toOptionValuations(
   catalog: InstrumentCatalog,
 ): OptionValuation[] {
   return records.map((r) => toOptionValuation(r, catalog));
+}
+
+/** String field as delivered, with null/missing ids rendered as "". */
+function textOf(value: unknown): string {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+/** Symbol/gfoId identity for a contract-number field, enriched from the catalog. */
+function identityFor(record: JsonRecord, catalog: InstrumentCatalog) {
+  const gfoId = num(record.contract_number);
+  const instrument = gfoId === null ? null : catalog.find(gfoId);
+  return {
+    symbol: instrument?.symbol ?? (gfoId === null ? "" : String(gfoId)),
+    gfoId: gfoId ?? -1,
+  };
+}
+
+function orderbookLevels(value: unknown): OrderbookLevel[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((level) => {
+    const row = level !== null && typeof level === "object" ? (level as JsonRecord) : {};
+    return { quantity: num(row.quantity), priceUsd: num(row.price) };
+  });
+}
+
+/** Decode every wire field of an orderbook row, keeping prices in USD. */
+export function toOrderbookSnapshots(
+  records: JsonRecord[],
+  catalog: InstrumentCatalog,
+): OrderbookSnapshot[] {
+  return records.map((r) => {
+    const bids = orderbookLevels(r.bids);
+    const asks = orderbookLevels(r.asks);
+    return {
+      snapshotIso: isoFromStructured(r.timestamp),
+      ...identityFor(r, catalog),
+      state: textOf(r.state),
+      numBids: num(r.num_of_bids) ?? bids.length,
+      numAsks: num(r.num_of_asks) ?? asks.length,
+      bids,
+      asks,
+      fullTickReferenceSequence: num(r.full_tick_reference_sequence),
+    };
+  });
+}
+
+function orderFlowEvent(record: JsonRecord, catalog: InstrumentCatalog): OrderFlowEvent | null {
+  const identity = {
+    timestampIso: isoFromStructured(record.timestamp),
+    ...identityFor(record, catalog),
+  };
+  switch (record.message_type) {
+    case "A":
+      return {
+        ...identity,
+        messageType: "A",
+        orderId: textOf(record.order_id),
+        volume: num(record.volume),
+        priceUsd: num(record.price),
+        side: textOf(record.side),
+        orderType: textOf(record.type),
+      };
+    case "D":
+      return {
+        ...identity,
+        messageType: "D",
+        orderId: textOf(record.order_id),
+        side: textOf(record.side),
+        remaining: num(record.remaining),
+      };
+    case "S":
+      return { ...identity, messageType: "S", priceUsd: num(record.price) };
+    case "O":
+      return {
+        ...identity,
+        messageType: "O",
+        volume: num(record.volume),
+        priceUsd: num(record.price),
+      };
+    case "T":
+      return { ...identity, messageType: "T", state: textOf(record.state) };
+    default:
+      return null;
+  }
+}
+
+/** Decode each event to the variant its message type defines. */
+export function toOrderFlowEvents(
+  records: JsonRecord[],
+  catalog: InstrumentCatalog,
+): OrderFlowEvent[] {
+  return records
+    .map((record) => orderFlowEvent(record, catalog))
+    .filter((event): event is OrderFlowEvent => event !== null);
 }
 
 /** Latest orderbook snapshot per contract in the records (max structured ts). */
