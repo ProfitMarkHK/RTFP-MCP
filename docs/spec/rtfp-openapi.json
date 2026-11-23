@@ -1,0 +1,1577 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "RTFP",
+        "version": "1.12.3"
+    },
+    "paths": {
+        "/instrument_dict": {
+            "get": {
+                "summary": "Underlyings",
+                "operationId": "underlyings_instrument_dict_get",
+                "parameters": [
+                    {
+                        "name": "underlying",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "BTC",
+                            "title": "Underlying"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstrumentDictResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/trades": {
+            "get": {
+                "summary": "Trades",
+                "operationId": "trades_trades_get",
+                "parameters": [
+                    {
+                        "name": "start_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Start Time"
+                        }
+                    },
+                    {
+                        "name": "end_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "End Time"
+                        }
+                    },
+                    {
+                        "name": "instrument_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Instrument Id"
+                        }
+                    },
+                    {
+                        "name": "underlying",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "BTC",
+                            "title": "Underlying"
+                        }
+                    },
+                    {
+                        "name": "start",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Start"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrdersExecutedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/statistics": {
+            "get": {
+                "summary": "Statistics",
+                "operationId": "statistics_statistics_get",
+                "parameters": [
+                    {
+                        "name": "start_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Start Time"
+                        }
+                    },
+                    {
+                        "name": "end_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "End Time"
+                        }
+                    },
+                    {
+                        "name": "instrument_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Instrument Id"
+                        }
+                    },
+                    {
+                        "name": "underlying",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "BTC",
+                            "title": "Underlying"
+                        }
+                    },
+                    {
+                        "name": "start",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Start"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StatisticsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/orderbook": {
+            "get": {
+                "summary": "Orderbook",
+                "operationId": "orderbook_orderbook_get",
+                "parameters": [
+                    {
+                        "name": "start_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Start Time"
+                        }
+                    },
+                    {
+                        "name": "end_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "End Time"
+                        }
+                    },
+                    {
+                        "name": "instrument_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Instrument Id"
+                        }
+                    },
+                    {
+                        "name": "underlying",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "BTC",
+                            "title": "Underlying"
+                        }
+                    },
+                    {
+                        "name": "start",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Start"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderBookResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/fulltick": {
+            "get": {
+                "summary": "Fulltick Update",
+                "operationId": "fulltick_update_fulltick_get",
+                "parameters": [
+                    {
+                        "name": "start_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Start Time"
+                        }
+                    },
+                    {
+                        "name": "end_time",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "End Time"
+                        }
+                    },
+                    {
+                        "name": "instrument_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Instrument Id"
+                        }
+                    },
+                    {
+                        "name": "underlying",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "BTC",
+                            "title": "Underlying"
+                        }
+                    },
+                    {
+                        "name": "start",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Start"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/options_valuation": {
+            "get": {
+                "summary": "Options Valuation",
+                "operationId": "options_valuation_options_valuation_get",
+                "parameters": [
+                    {
+                        "name": "underlying",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "BTC",
+                            "title": "Underlying"
+                        }
+                    },
+                    {
+                        "name": "start",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Start"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OptionsValuationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Message"
+                                }
+                            }
+                        },
+                        "description": "Not Found"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Futures": {
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "title": "Type"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "gfo_id": {
+                        "type": "integer",
+                        "title": "Gfo Id"
+                    },
+                    "parent_id": {
+                        "type": "integer",
+                        "title": "Parent Id"
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "title": "Symbol"
+                    },
+                    "isin": {
+                        "type": "string",
+                        "title": "Isin"
+                    },
+                    "settlement_type": {
+                        "type": "string",
+                        "title": "Settlement Type"
+                    },
+                    "trade_currency": {
+                        "type": "string",
+                        "title": "Trade Currency"
+                    },
+                    "currency_multiplier": {
+                        "type": "integer",
+                        "title": "Currency Multiplier"
+                    },
+                    "tick_table": {
+                        "items": {
+                            "$ref": "#/components/schemas/Tick"
+                        },
+                        "type": "array",
+                        "title": "Tick Table"
+                    },
+                    "expiry": {
+                        "type": "string",
+                        "title": "Expiry"
+                    },
+                    "effective": {
+                        "type": "string",
+                        "title": "Effective"
+                    },
+                    "size_multiplier": {
+                        "type": "string",
+                        "title": "Size Multiplier"
+                    },
+                    "contract_multiplier": {
+                        "type": "string",
+                        "title": "Contract Multiplier"
+                    },
+                    "cfi_code": {
+                        "type": "string",
+                        "title": "Cfi Code"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "type",
+                    "name",
+                    "gfo_id",
+                    "parent_id",
+                    "symbol",
+                    "isin",
+                    "settlement_type",
+                    "trade_currency",
+                    "currency_multiplier",
+                    "tick_table",
+                    "expiry",
+                    "effective",
+                    "size_multiplier",
+                    "contract_multiplier",
+                    "cfi_code"
+                ],
+                "title": "Futures"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "InstrumentDict": {
+                "properties": {
+                    "futures": {
+                        "items": {
+                            "$ref": "#/components/schemas/Futures"
+                        },
+                        "type": "array",
+                        "title": "Futures"
+                    },
+                    "options": {
+                        "items": {
+                            "$ref": "#/components/schemas/Options"
+                        },
+                        "type": "array",
+                        "title": "Options"
+                    },
+                    "strategies": {
+                        "items": {
+                            "$ref": "#/components/schemas/Strategy"
+                        },
+                        "type": "array",
+                        "title": "Strategies"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "futures",
+                    "options",
+                    "strategies"
+                ],
+                "title": "InstrumentDict"
+            },
+            "InstrumentDictResponse": {
+                "properties": {
+                    "result": {
+                        "$ref": "#/components/schemas/InstrumentDict"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "result"
+                ],
+                "title": "InstrumentDictResponse",
+                "examples": [
+                    {
+                        "result": {
+                            "futures": [
+                                {
+                                    "type": "F",
+                                    "name": "GFO-X Bitcoin Futures",
+                                    "gfo_id": 28,
+                                    "parent_id": 3,
+                                    "symbol": "GFBTF261224",
+                                    "isin": "GB00KHHP9009",
+                                    "settlement_type": "CASH",
+                                    "trade_currency": "USD",
+                                    "currency_multiplier": 10,
+                                    "tick_table": [
+                                        {
+                                            "tick_size": 50000000000,
+                                            "upper_limit": 0
+                                        }
+                                    ],
+                                    "expiry": "1798128000000000000",
+                                    "effective": "1766966400000000000",
+                                    "size_multiplier": "1.0",
+                                    "contract_multiplier": "1.0",
+                                    "cfi_code": "FFICSX"
+                                }
+                            ],
+                            "options": [
+                                {
+                                    "type": "O",
+                                    "name": "GFO-X Bitcoin Monthly Options",
+                                    "gfo_id": 4567,
+                                    "parent_id": 4,
+                                    "symbol": "GFBTO270325115000.00C",
+                                    "isin": "GB00N0XN4340",
+                                    "settlement_type": "CASH",
+                                    "trade_currency": "USD",
+                                    "currency_multiplier": 10,
+                                    "tick_table": [
+                                        {
+                                            "tick_size": 10000000000,
+                                            "upper_limit": 100000000000
+                                        },
+                                        {
+                                            "tick_size": 100000000000,
+                                            "upper_limit": 0
+                                        }
+                                    ],
+                                    "expiry": "1805990400000000000",
+                                    "effective": "1776211200000000000",
+                                    "size_multiplier": "1.0",
+                                    "contract_multiplier": "1.0",
+                                    "cfi_code": "OCEICS",
+                                    "strike_price": 1150000000000000,
+                                    "exercise_type": "E",
+                                    "call_put": "C"
+                                }
+                            ],
+                            "strategies": [
+                                {
+                                    "type": "S",
+                                    "name": "GFO-X Bitcoin Futures Roll",
+                                    "gfo_id": 492,
+                                    "parent_id": 2,
+                                    "symbol": "GFBTFS260424-260529",
+                                    "isin": "",
+                                    "settlement_type": "CASH",
+                                    "trade_currency": "USD",
+                                    "currency_multiplier": 10,
+                                    "tick_table": [
+                                        {
+                                            "tick_size": 50000000000,
+                                            "upper_limit": 0
+                                        }
+                                    ],
+                                    "expiry": "1777042800000000000",
+                                    "effective": "1774828800000000000",
+                                    "strategy": [
+                                        {
+                                            "leg_instrument_id": 20,
+                                            "leg_volume": -1.0
+                                        },
+                                        {
+                                            "leg_instrument_id": 21,
+                                            "leg_volume": 1.0
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "MarketSide": {
+                "properties": {
+                    "quantity": {
+                        "type": "number",
+                        "title": "Quantity"
+                    },
+                    "price": {
+                        "type": "number",
+                        "title": "Price"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "quantity",
+                    "price"
+                ],
+                "title": "MarketSide"
+            },
+            "Message": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "message"
+                ],
+                "title": "Message"
+            },
+            "OptionGreeks": {
+                "properties": {
+                    "delta": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Delta"
+                    },
+                    "gamma": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Gamma"
+                    },
+                    "vega": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Vega"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "delta",
+                    "gamma",
+                    "vega"
+                ],
+                "title": "OptionGreeks"
+            },
+            "Options": {
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "title": "Type"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "gfo_id": {
+                        "type": "integer",
+                        "title": "Gfo Id"
+                    },
+                    "parent_id": {
+                        "type": "integer",
+                        "title": "Parent Id"
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "title": "Symbol"
+                    },
+                    "isin": {
+                        "type": "string",
+                        "title": "Isin"
+                    },
+                    "settlement_type": {
+                        "type": "string",
+                        "title": "Settlement Type"
+                    },
+                    "trade_currency": {
+                        "type": "string",
+                        "title": "Trade Currency"
+                    },
+                    "currency_multiplier": {
+                        "type": "integer",
+                        "title": "Currency Multiplier"
+                    },
+                    "tick_table": {
+                        "items": {
+                            "$ref": "#/components/schemas/Tick"
+                        },
+                        "type": "array",
+                        "title": "Tick Table"
+                    },
+                    "expiry": {
+                        "type": "string",
+                        "title": "Expiry"
+                    },
+                    "effective": {
+                        "type": "string",
+                        "title": "Effective"
+                    },
+                    "size_multiplier": {
+                        "type": "string",
+                        "title": "Size Multiplier"
+                    },
+                    "contract_multiplier": {
+                        "type": "string",
+                        "title": "Contract Multiplier"
+                    },
+                    "cfi_code": {
+                        "type": "string",
+                        "title": "Cfi Code"
+                    },
+                    "strike_price": {
+                        "type": "integer",
+                        "title": "Strike Price"
+                    },
+                    "exercise_type": {
+                        "type": "string",
+                        "title": "Exercise Type"
+                    },
+                    "call_put": {
+                        "type": "string",
+                        "title": "Call Put"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "type",
+                    "name",
+                    "gfo_id",
+                    "parent_id",
+                    "symbol",
+                    "isin",
+                    "settlement_type",
+                    "trade_currency",
+                    "currency_multiplier",
+                    "tick_table",
+                    "expiry",
+                    "effective",
+                    "size_multiplier",
+                    "contract_multiplier",
+                    "cfi_code",
+                    "strike_price",
+                    "exercise_type",
+                    "call_put"
+                ],
+                "title": "Options"
+            },
+            "OptionsValuation": {
+                "properties": {
+                    "exchange_timestamp": {
+                        "type": "integer",
+                        "title": "Exchange Timestamp"
+                    },
+                    "contract_number": {
+                        "type": "integer",
+                        "title": "Contract Number"
+                    },
+                    "underlying_future_price": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Underlying Future Price"
+                    },
+                    "option_price": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Option Price"
+                    },
+                    "option_implied_volatility": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Option Implied Volatility"
+                    },
+                    "option_greeks": {
+                        "$ref": "#/components/schemas/OptionGreeks"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "exchange_timestamp",
+                    "contract_number",
+                    "underlying_future_price",
+                    "option_price",
+                    "option_implied_volatility",
+                    "option_greeks"
+                ],
+                "title": "OptionsValuation"
+            },
+            "OptionsValuationResponse": {
+                "properties": {
+                    "result": {
+                        "items": {
+                            "$ref": "#/components/schemas/OptionsValuation"
+                        },
+                        "type": "array",
+                        "title": "Result"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "title": "Limit"
+                    },
+                    "next": {
+                        "type": "string",
+                        "title": "Next"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "result",
+                    "limit",
+                    "next"
+                ],
+                "title": "OptionsValuationResponse",
+                "examples": [
+                    {
+                        "limit": 100,
+                        "next": "https://marketdata.gfo-x.com:38973/options_valuation?underlying=BTC&limit=100&start=100",
+                        "result": [
+                            {
+                                "exchange_timestamp": 1776258487,
+                                "contract_number": 1082,
+                                "underlying_future_price": 74958.34,
+                                "option_price": 1261.85,
+                                "option_implied_volatility": 0.5054,
+                                "option_greeks": {
+                                    "delta": -0.1339,
+                                    "gamma": 1.28e-05,
+                                    "vega": 71.77
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            "OrderBookResponse": {
+                "properties": {
+                    "result": {
+                        "items": {
+                            "$ref": "#/components/schemas/PulsedFeedMarketData"
+                        },
+                        "type": "array",
+                        "title": "Result"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "title": "Limit"
+                    },
+                    "next": {
+                        "type": "string",
+                        "title": "Next"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "result",
+                    "limit",
+                    "next"
+                ],
+                "title": "OrderBookResponse",
+                "examples": [
+                    {
+                        "limit": 100,
+                        "next": "https://marketdata.gfo-x.com:38973/orderbook?underlying=BTC&start_time=1702368428&end_time=1702280000&limit=100&start=100",
+                        "result": [
+                            {
+                                "asks": [
+                                    {
+                                        "price": 41500,
+                                        "quantity": 150
+                                    }
+                                ],
+                                "bids": [
+                                    {
+                                        "price": 41000,
+                                        "quantity": 150
+                                    }
+                                ],
+                                "contract_number": 10016,
+                                "full_tick_reference_sequence": 10,
+                                "num_of_asks": 1,
+                                "num_of_bids": 1,
+                                "state": "O",
+                                "timestamp": 1702366007
+                            }
+                        ]
+                    }
+                ]
+            },
+            "OrderExecuted": {
+                "properties": {
+                    "timestamp": {
+                        "type": "integer",
+                        "format": "int64",
+                        "title": "Timestamp"
+                    },
+                    "contract_number": {
+                        "type": "integer",
+                        "title": "Contract Number"
+                    },
+                    "passive_order_id": {
+                        "type": "integer",
+                        "title": "Passive Order Id"
+                    },
+                    "aggressor_order_id": {
+                        "type": "integer",
+                        "title": "Aggressor Order Id"
+                    },
+                    "trade_id": {
+                        "type": "integer",
+                        "format": "int64",
+                        "title": "Trade Id"
+                    },
+                    "aggressor_side": {
+                        "type": "string",
+                        "title": "Aggressor Side"
+                    },
+                    "quantity_executed": {
+                        "type": "number",
+                        "title": "Quantity Executed"
+                    },
+                    "trade_price": {
+                        "type": "number",
+                        "title": "Trade Price"
+                    },
+                    "trading_session": {
+                        "type": "string",
+                        "title": "Trading Session"
+                    },
+                    "trade_type": {
+                        "type": "string",
+                        "title": "Trade Type"
+                    },
+                    "leg_count": {
+                        "type": "integer",
+                        "title": "Leg Count"
+                    },
+                    "sub_trade_id": {
+                        "type": "integer",
+                        "title": "Sub Trade Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "timestamp",
+                    "contract_number",
+                    "passive_order_id",
+                    "aggressor_order_id",
+                    "trade_id",
+                    "aggressor_side",
+                    "quantity_executed",
+                    "trade_price",
+                    "trading_session",
+                    "trade_type",
+                    "leg_count",
+                    "sub_trade_id"
+                ],
+                "title": "OrderExecuted"
+            },
+            "OrdersExecutedResponse": {
+                "properties": {
+                    "result": {
+                        "items": {
+                            "$ref": "#/components/schemas/OrderExecuted"
+                        },
+                        "type": "array",
+                        "title": "Result"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "title": "Limit"
+                    },
+                    "next": {
+                        "type": "string",
+                        "title": "Next"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "result",
+                    "limit",
+                    "next"
+                ],
+                "title": "OrdersExecutedResponse",
+                "examples": [
+                    {
+                        "limit": 100,
+                        "next": "https://marketdata.gfo-x.com:38973/trades?underlying=BTC&start_time=1702368428&end_time=1702280000&limit=100&start=100",
+                        "result": [
+                            {
+                                "aggressor_order_id": 1423445,
+                                "aggressor_side": "B",
+                                "contract_number": 10015,
+                                "leg_count": 1,
+                                "passive_order_id": 12342434,
+                                "quantity_executed": 100,
+                                "sub_trade_id": 0,
+                                "timestamp": 1702366007,
+                                "trade_id": 1245,
+                                "trade_price": 41000,
+                                "trade_type": "N",
+                                "trading_session": "S"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "PulsedFeedMarketData": {
+                "properties": {
+                    "timestamp": {
+                        "type": "integer",
+                        "title": "Timestamp"
+                    },
+                    "contract_number": {
+                        "type": "integer",
+                        "title": "Contract Number"
+                    },
+                    "state": {
+                        "type": "string",
+                        "title": "State"
+                    },
+                    "num_of_bids": {
+                        "type": "integer",
+                        "title": "Num Of Bids"
+                    },
+                    "bids": {
+                        "items": {
+                            "$ref": "#/components/schemas/MarketSide"
+                        },
+                        "type": "array",
+                        "title": "Bids"
+                    },
+                    "num_of_asks": {
+                        "type": "integer",
+                        "title": "Num Of Asks"
+                    },
+                    "asks": {
+                        "items": {
+                            "$ref": "#/components/schemas/MarketSide"
+                        },
+                        "type": "array",
+                        "title": "Asks"
+                    },
+                    "full_tick_reference_sequence": {
+                        "type": "integer",
+                        "title": "Full Tick Reference Sequence"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "timestamp",
+                    "contract_number",
+                    "state",
+                    "num_of_bids",
+                    "bids",
+                    "num_of_asks",
+                    "asks",
+                    "full_tick_reference_sequence"
+                ],
+                "title": "PulsedFeedMarketData"
+            },
+            "Statistics": {
+                "properties": {
+                    "timestamp": {
+                        "type": "integer",
+                        "title": "Timestamp"
+                    },
+                    "contract_number": {
+                        "type": "integer",
+                        "title": "Contract Number"
+                    },
+                    "open_price": {
+                        "type": "number",
+                        "title": "Open Price"
+                    },
+                    "high_price": {
+                        "type": "number",
+                        "title": "High Price"
+                    },
+                    "low_price": {
+                        "type": "number",
+                        "title": "Low Price"
+                    },
+                    "last_price": {
+                        "type": "number",
+                        "title": "Last Price"
+                    },
+                    "reference_price": {
+                        "type": "number",
+                        "title": "Reference Price"
+                    },
+                    "last_volume": {
+                        "type": "number",
+                        "title": "Last Volume"
+                    },
+                    "total_volume": {
+                        "type": "number",
+                        "title": "Total Volume"
+                    },
+                    "total_number_of_trades": {
+                        "type": "integer",
+                        "title": "Total Number Of Trades"
+                    },
+                    "open_interest": {
+                        "type": "integer",
+                        "title": "Open Interest"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "timestamp",
+                    "contract_number",
+                    "open_price",
+                    "high_price",
+                    "low_price",
+                    "last_price",
+                    "reference_price",
+                    "last_volume",
+                    "total_volume",
+                    "total_number_of_trades",
+                    "open_interest"
+                ],
+                "title": "Statistics"
+            },
+            "StatisticsResponse": {
+                "properties": {
+                    "result": {
+                        "items": {
+                            "$ref": "#/components/schemas/Statistics"
+                        },
+                        "type": "array",
+                        "title": "Result"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "title": "Limit"
+                    },
+                    "next": {
+                        "type": "string",
+                        "title": "Next"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "result",
+                    "limit",
+                    "next"
+                ],
+                "title": "StatisticsResponse",
+                "examples": [
+                    {
+                        "limit": 100,
+                        "next": "https://marketdata.gfo-x.com:38973/statistics?underlying=BTC&start_time=1702368428&end_time=1702280000&limit=100&start=100",
+                        "result": [
+                            {
+                                "contract_number": 10018,
+                                "high_price": 42000,
+                                "last_price": 41500,
+                                "last_volume": 10000,
+                                "low_price": 40900,
+                                "open_interest": 150,
+                                "open_price": 41000,
+                                "reference_price": 41600,
+                                "timestamp": 1702366007,
+                                "total_number_of_trades": 40,
+                                "total_volume": 50000
+                            }
+                        ]
+                    }
+                ]
+            },
+            "Strategy": {
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "title": "Type"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "gfo_id": {
+                        "type": "integer",
+                        "title": "Gfo Id"
+                    },
+                    "parent_id": {
+                        "type": "integer",
+                        "title": "Parent Id"
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "title": "Symbol"
+                    },
+                    "isin": {
+                        "type": "string",
+                        "title": "Isin"
+                    },
+                    "settlement_type": {
+                        "type": "string",
+                        "title": "Settlement Type"
+                    },
+                    "trade_currency": {
+                        "type": "string",
+                        "title": "Trade Currency"
+                    },
+                    "currency_multiplier": {
+                        "type": "integer",
+                        "title": "Currency Multiplier"
+                    },
+                    "tick_table": {
+                        "items": {
+                            "$ref": "#/components/schemas/Tick"
+                        },
+                        "type": "array",
+                        "title": "Tick Table"
+                    },
+                    "expiry": {
+                        "type": "string",
+                        "title": "Expiry"
+                    },
+                    "effective": {
+                        "type": "string",
+                        "title": "Effective"
+                    },
+                    "strategy": {
+                        "items": {
+                            "$ref": "#/components/schemas/StrategyLeg"
+                        },
+                        "type": "array",
+                        "title": "Strategy"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "type",
+                    "name",
+                    "gfo_id",
+                    "parent_id",
+                    "symbol",
+                    "isin",
+                    "settlement_type",
+                    "trade_currency",
+                    "currency_multiplier",
+                    "tick_table",
+                    "expiry",
+                    "effective",
+                    "strategy"
+                ],
+                "title": "Strategy"
+            },
+            "StrategyLeg": {
+                "properties": {
+                    "leg_instrument_id": {
+                        "type": "integer",
+                        "title": "Leg Instrument Id"
+                    },
+                    "leg_volume": {
+                        "type": "number",
+                        "title": "Leg Volume"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "leg_instrument_id",
+                    "leg_volume"
+                ],
+                "title": "StrategyLeg"
+            },
+            "Tick": {
+                "properties": {
+                    "tick_size": {
+                        "type": "integer",
+                        "title": "Tick Size"
+                    },
+                    "upper_limit": {
+                        "type": "integer",
+                        "title": "Upper Limit"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "tick_size",
+                    "upper_limit"
+                ],
+                "title": "Tick"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    }
+}
