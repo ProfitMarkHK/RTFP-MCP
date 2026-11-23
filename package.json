@@ -37,6 +37,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --deny-warnings src tests scripts examples",
     "complexity": "eslint src",
+    "mock": "bun run src/mock-server.ts",
+    "test:mock": "RTFP_LIVE=1 RTFP_BASE_URL=http://127.0.0.1:38973 bun test tests/live.test.ts",
     "smoke": "bun run examples/smoke-client.ts",
     "check": "bash scripts/check-gates.sh"
   },

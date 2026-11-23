@@ -4,21 +4,28 @@
  * Spawns rtfp-mcp as a real subprocess (the way an MCP host would), performs
  * the MCP handshake over stdio, and exercises the tools.
  *
- *   RTFP_DEMO=1 bun run examples/smoke-client.ts  # canned data, offline
- *   RTFP_LIVE=1 bun run examples/smoke-client.ts  # real GFO-X endpoints
+ *   RTFP_MOCK=1  bun run examples/smoke-client.ts  # local RTFP look-alike over real HTTP
+ *                                             # (`bun run mock` must be running)
+ *   RTFP_DEMO=1  bun run examples/smoke-client.ts  # canned data, offline
+ *   RTFP_LIVE=1  bun run examples/smoke-client.ts  # real GFO-X endpoints
  *                                                  # (office network / VPN)
  */
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-const mode = process.env.RTFP_LIVE === "1" ? "live" : "demo";
+const mode =
+  process.env.RTFP_LIVE === "1" ? "live" : process.env.RTFP_MOCK === "1" ? "mock" : "demo";
 console.log(`smoke: spawning rtfp-mcp over stdio (${mode} data)`);
+
+const env: Record<string, string> = { ...process.env } as Record<string, string>;
+env.RTFP_MOCK = mode === "mock" ? "1" : "";
+env.RTFP_DEMO = mode === "demo" ? "1" : "";
 
 const transport = new StdioClientTransport({
   command: process.execPath,
   args: ["src/index.ts"],
-  env: { ...process.env as Record<string, string>, RTFP_DEMO: mode === "demo" ? "1" : "" },
+  env,
 });
 const client = new Client({ name: "smoke-client", version: "0.0.1" });
 await client.connect(transport);

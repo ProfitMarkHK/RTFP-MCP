@@ -35,8 +35,8 @@ tests excluded, no grandfathering.
 
 | # | Gate | State | Command / note |
 |---|------|-------|----------------|
-| 1 | All tests pass | applies | `bun test` (58 tests across 7 files; live tests auto-skipped) |
-| 2 | End-to-end / acceptance tests pass | applies | `tests/server.test.ts` drives the server through the real MCP protocol via `InMemoryTransport` (handshake, listTools, callTool); `RTFP_DEMO=1 bun run smoke` drives it over real stdio as a subprocess; `RTFP_LIVE=1 bun run test:live` exercises the deployed endpoints (needs office network / GFO-X VPN) |
+| 1 | All tests pass | applies | `bun test` (69 tests across 8 files; live tests auto-skipped) |
+| 2 | End-to-end / acceptance tests pass | applies | `tests/mock-integration.test.ts` drives the full client stack against the bundled RTFP look-alike (`src/mock-server.ts`) over real HTTP — window limit, multi-page pagination via the wrong-host/never-empty `next` bug, instrument filtering, quote widening, Black76-consistent valuations — in the default suite; `tests/server.test.ts` drives the server through the real MCP protocol via `InMemoryTransport`; `RTFP_MOCK=1 bun run smoke` drives stdio → HTTP → look-alike; `RTFP_LIVE=1 bun run test:live` exercises the deployed endpoints (needs office network / VPN *and* the venue up) |
 | 3 | Linters / formatters / static analysis pass (incl. complexity ≤ 10, tests excluded) | applies | oxlint (`bun run lint`), ESLint complexity (`bun run complexity`), shellcheck — all inside `bun run check` |
 | 4 | New code covered by non-trivial tests | applies | manual review — tests cover the API's known bugs (wrong-host `next`, never-empty `next`), window chunking, closed-window caching, retry/backoff, quote widening, decoding edges, put-call parity, IV round-trip |
 | 5 | Documentation updated | applies | manual review — README, this checklist, AGENTS.md |
@@ -60,10 +60,13 @@ given), **gap** (should apply but not yet possible, tracked as work).
 - Gap — CI: the project has no remote or CI config yet. The runner is
   pre-commit/local only. Wire `bun run check` into CI when the repo gets a
   remote.
-- Gap — live acceptance: the live RTFP endpoints are only reachable from the
-  office network / GFO-X VPN. E2E is verified offline (demo data over real
-  stdio) and by unit/protocol tests; re-run `RTFP_LIVE=1 bun run test:live`
-  from the office network before relying on live numbers.
+- Gap — live acceptance: the RTFP venue itself is currently down, and even
+  when up its endpoints are only reachable from the office network / GFO-X
+  VPN. E2E is covered by three layers that run anywhere: the mock-integration
+  suite against the bundled RTFP look-alike (real HTTP, faithful wire formats
+  and API bugs), the demo transport over real stdio, and the protocol tests
+  with faithful fakes. Re-run `RTFP_LIVE=1 bun run test:live` from the office
+  network when the venue is back, before relying on live numbers.
 - Gate 8 threshold, stated explicitly: advisories at **high severity or
   above** fail the gate; low/moderate are reported but tolerated.
 

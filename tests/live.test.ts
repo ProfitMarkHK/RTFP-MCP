@@ -13,8 +13,15 @@ import { currentQuotes, recentTrades, toOptionValuations } from "../src/market.j
 
 const live = !!process.env.RTFP_LIVE;
 
+// RTFP_BASE_URL lets the live suite run against any RTFP-shaped API,
+// including the bundled look-alike (`bun run mock`).
+const baseUrlOverride = process.env.RTFP_BASE_URL;
+
 describe.skipIf(!live)("RTFP live endpoints", () => {
-  const client = new RtfpClient({ timeoutMs: 30_000 });
+  const client = new RtfpClient({
+    timeoutMs: 30_000,
+    ...(baseUrlOverride ? { baseUrl: baseUrlOverride } : {}),
+  });
 
   test("instrument_dict returns a decoded catalog", async () => {
     const catalog = await InstrumentCatalog.load(client);

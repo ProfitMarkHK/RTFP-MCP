@@ -92,9 +92,33 @@ Environment:
 # Offline end-to-end over real stdio: handshake, list tools, call tools.
 RTFP_DEMO=1 bun run smoke
 
-# Live tests against the real endpoints (needs office network / VPN).
+# Against the bundled RTFP look-alike over real HTTP (venue not required).
+bun run mock &                       # terminal 1: look-alike on :38973
+RTFP_MOCK=1 bun run smoke            # terminal 2: full stdio -> HTTP chain
+bun run test:mock                    # the live test suite against the look-alike
+
+# Against the real endpoints (needs office network / VPN; venue must be up).
 RTFP_LIVE=1 bun run test:live
 ```
+
+### The RTFP look-alike (`bun run mock`)
+
+`src/mock-server.ts` serves a faithful RTFP on `http://127.0.0.1:38973`
+(`MOCK_PORT` to change): every endpoint, exact wire formats, and —
+deliberately — the API's documented quirks, so the client's workarounds are
+exercised over real HTTP instead of being taken on faith:
+
+- `next` URLs point at a *different host* and never empty (both known bugs)
+- 300-second window limit enforced (400 on violation)
+- structured `unix_sec * 1e9 + sequence` timestamps; scaled
+  `instrument_dict` prices; plain-seconds `options_valuation` timestamps
+- a deterministic market: seeded per-(instrument, second) generation means
+  any window is reconstructible without stored state — futures term
+  structure with contango, trades, orderbooks, OHLC, order-flow events,
+  and Black76-consistent option prices with an IV smile
+
+Point anything RTFP-shaped at it with `RTFP_BASE_URL=http://127.0.0.1:38973`.
+
 
 ## Development
 
@@ -115,6 +139,7 @@ src/catalog.ts    decoded instrument catalog (session-cached)
 src/market.ts     workflows: recent trades, current quotes, enrichment
 src/black76.ts    Black76 pricing + bisection IV solver (no math deps)
 src/server.ts     MCP tool surface (Anthropic SDK McpServer + zod schemas)
+src/mock-server.ts RTFP look-alike: faithful endpoints over local HTTP
 src/demo.ts       canned responses for RTFP_DEMO=1
 tests/            bun test: unit + in-memory MCP protocol E2E + live smoke
 docs/spec/        the RTFP OpenAPI schema and API reference (the spec gates 11)
